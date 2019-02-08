@@ -9,6 +9,7 @@ class Task {
     protected $TaskDataSource;
     public function __construct($Id = null) {
         $this->TaskDataSource = file_get_contents('Task_Data.txt');
+		
         if (strlen($this->TaskDataSource) > 0)
             $this->TaskDataSource = json_decode($this->TaskDataSource); // Should decode to an array of Task objects
         else
@@ -20,28 +21,90 @@ class Task {
             $this->Create();
     }
     protected function Create() {
+		
         // This function needs to generate a new unique ID for the task
-        // Assignment: Generate unique id for the new task
+		// get fields values and use htmlentities for security 
         $this->TaskId = $this->getUniqueId();
-        $this->TaskName = 'New Task';
-        $this->TaskDescription = 'New Description';
+        $this->TaskName = htmlentities($_POST['InputTaskName']);
+        $this->TaskDescription = htmlentities($_POST['InputTaskDescription']);
+		// get task array
+		$taskDataArray = $this->TaskDataSource;
+		// build task subarray
+		$data = array("TaskId" => $this->TaskId, "TaskName" => $this->TaskName, "TaskDescription" =>  $this->TaskDescription);
+		// add task subarray to the main array
+		array_push($taskDataArray, $data);
+		// decode to json before writing back to file
+		$jsonData = json_encode($taskDataArray);
+		file_put_contents('Task_Data.txt', $jsonData);
+		
     }
     protected function getUniqueId() {
-        // Assignment: Code to get new unique ID
-        return -1; // Placeholder return for now
+        // Generate uniqueId
+		$uniqueid = uniqid();
+        return $uniqueid; // Placeholder return for now
     }
     protected function LoadFromId($Id = null) {
+		$taskDataArray = $this->TaskDataSource;
+		
         if ($Id) {
-            // Assignment: Code to load details here...
+			
+				 $this->TaskId = $Id;
+				// Load details and check if passed taskId alread exist in the file Task_Data.txt
+				 foreach ($taskDataArray as $task) {
+					 
+					$taskId = $task->TaskId;
+					if($taskId == $Id){
+						return $taskId; 
+					}
+				 }
+	
         } else
             return null;
     }
 
     public function Save() {
-        //Assignment: Code to save task here
+		
+		//Assignment: Code to save task here
+		$taskDataArray = $this->TaskDataSource;
+		$taskId = $this->TaskId;
+		$this->TaskName = htmlentities($_POST['InputTaskName']);
+        $this->TaskDescription = htmlentities($_POST['InputTaskDescription']);
+		
+		//echo "<script>console.log( 'Debug Objects: " . $taskId . "' );</script>";
+		foreach($taskDataArray as &$task){
+			if($task->TaskId == $taskId){
+				$task->TaskName = $this->TaskName;
+				$task->TaskDescription = $this->TaskDescription;
+				break; // Stop the loop after we've found the item
+			}
+		}
+		unset($task); // break the reference with the last element
+		// write back to the txt file Task_Data.txt
+		$jsonData = json_encode($taskDataArray);
+		file_put_contents('Task_Data.txt', $jsonData);
     }
-    public function Delete() {
-        //Assignment: Code to delete task here
+	/*
+	* Function to save a task...i.e to update an existing task
+	*/
+    public function DeleteTask() {
+		// stores the resulting array after deleting
+		$tasks = array();
+		$taskDataArray = $this->TaskDataSource;
+		$taskId = $this->TaskId;
+		
+		// loop through all existing tasks and skip the task to be deleted
+		foreach($taskDataArray as $subKey => $subArray){
+			// prepare build the main array
+			$task = array();
+		    if($subArray->TaskId != $taskId){
+			   //unset($taskDataArray[$subKey]);
+			   $task = array('TaskId'=>$subArray -> TaskId, 'TaskName'=>$subArray -> TaskName, 'TaskDescription'=>$subArray -> TaskDescription);
+			   $tasks[] = $task;
+		    }
+		}
+		// write back to the txt file Task_Data.txt
+		$jsonData = json_encode($tasks);
+		file_put_contents('Task_Data.txt', $jsonData);
     }
 }
 ?>

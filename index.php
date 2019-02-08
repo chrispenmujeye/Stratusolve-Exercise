@@ -71,7 +71,7 @@
 <script type="text/javascript" src="assets/js/jquery-1.12.3.min.js"></script>
 <script type="text/javascript" src="assets/js/bootstrap.min.js"></script>
 <script type="text/javascript">
-    var currentTaskId = -1;
+	var currentTaskId = -1;
     $('#myModal').on('show.bs.modal', function (event) {
         var triggerElement = $(event.relatedTarget); // Element that triggered the modal
         var modal = $(this);
@@ -79,24 +79,93 @@
             modal.find('.modal-title').text('New Task');
             $('#deleteTask').hide();
             currentTaskId = -1;
+			// make the form empty
+			$(this).find('form')[0].reset();
         } else {
             modal.find('.modal-title').text('Task details');
             $('#deleteTask').show();
             currentTaskId = triggerElement.attr("id");
-            console.log('Task ID: '+triggerElement.attr("id"));
+            //console.log('Task ID: '+triggerElement.attr("id"));
         }
     });
     $('#saveTask').click(function() {
-        //Assignment: Implement this functionality
-        alert('Save... Id:'+currentTaskId);
+		
+		//	Declare the form and the data we want to save
+		var InputTaskName = $("#InputTaskName").val();
+		var InputTaskDescription = $("#InputTaskDescription").val();
+		// what action is happening
+		var mode = "update";
+		if(currentTaskId == -1)
+		{
+			mode = "create"
+		}
+		//	Now let's post the captured data to 'update_task.php';
+		$.post("update_task.php", {currentTaskId: currentTaskId, InputTaskName: InputTaskName, InputTaskDescription: InputTaskDescription, mode: mode}, function(data){
+			//Takes the data returned from the server and embeds in the target HTML.
+			$("#TaskList").html(data);
+		});
+		if(currentTaskId == -1)
+			alert('Task being saved');
+		else
+			alert('TaskId Id:'+currentTaskId + ' being updated');
+		
         $('#myModal').modal('hide');
         updateTaskList();
     });
+	
+	// onclick of each task, the data for that task should populate the modal, to know what we editing or what we deleting at least
+	$('#TaskList').on('click', '.list-group-item', function(e)
+	{
+		var TaskItemId = $(this).attr('id');
+		var taskData = [];
+		var returnData = [];
+		var taskItemModal = $('#myModal');
+		//	Here we'll use the short AJAX function get();
+		var taskUrl = 'Task_Data.txt';
+		taskData = $.get( taskUrl, function( data )
+		{
+			// Success
+		});
+		//	Results
+		taskData.done(function( data ) 
+		{
+			returnData = JSON.parse( data );
+			$.each(returnData, function(k, v)
+			{
+				if(v.TaskId == TaskItemId)
+				{
+					taskItemModal.find('#InputTaskId').val(TaskItemId);
+					taskItemModal.find('#InputTaskName').val(v.TaskName);
+					taskItemModal.find('#InputTaskDescription').val(v.TaskDescription);
+					return false;
+				}
+			});
+			$('#myModal').modal('show');
+			// we should set current task id to this task id
+			currentTaskId = TaskItemId;
+		});
+	});
     $('#deleteTask').click(function() {
-        //Assignment: Implement this functionality
-        alert('Delete... Id:'+currentTaskId);
-        $('#myModal').modal('hide');
-        updateTaskList();
+		
+		// confirm action
+		var confirmDialogue = confirm("Are you sure you wish to delete task "+ currentTaskId);
+		if (confirmDialogue == true)
+		{
+			var mode = "delete";
+			//	Now let's post the captured data to 'update_task.php';
+			$.post("update_task.php", {currentTaskId: currentTaskId, mode: mode}, function(data){
+				//Takes the data returned from the server and embeds in the HTML.
+				$("#TaskList").html(data);
+			});
+			alert('TaskId Id:'+currentTaskId + ' being deleted');
+			$('#myModal').modal('hide');
+		}
+		else
+		{
+			// do nothing
+		}
+		// update task list
+		updateTaskList();
     });
     function updateTaskList() {
         $.post("list_tasks.php", function( data ) {
